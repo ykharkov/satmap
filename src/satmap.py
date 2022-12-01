@@ -47,7 +47,7 @@ def extractQbits(fname):
                 if num > highest_register_value:
                     highest_register_value = num
     return highest_register_value + 1  # <--register values start at 0
- 
+
 ## Topological layering ##
 
 def getLayers(cnots):
@@ -79,10 +79,10 @@ def sortCnots(logNum, cnots):
 
 
 def generateAndWriteClauses(logNum, liveCnots, cnots, cm, swapNum, ffClauses, path, routing=True, weighted=False, boundedAbove=False, layering=False, calibrationData=None):
-    ''' 
+    '''
         Writes the constraints corresponding to a particular MaxSat Instance to the given path as a wcnf file
     '''
-    
+
     physNum = len(cm)
     numCnots = len(cnots)
     if layering:
@@ -103,7 +103,7 @@ def generateAndWriteClauses(logNum, liveCnots, cnots, cm, swapNum, ffClauses, pa
         if routing:
             writeSwapChoiceConstraint(swapNum, layers, cm, physNum, logNum, numCnots, top, f, satSolver=s)
             writeSwapEffectConstraint(swapNum, layers, liveLog, physNum, cm, logNum, numCnots, top, f, satSolver=s)
-        elif weighted: 
+        elif weighted:
             writeDistanceConstraint(swapNum, physNum, logNum, numCnots, top, f, satSolver=s)
         elif boundedAbove:
             writeMaxDisplacedConstraint(5, physNum, logNum, swapNum, numCnots, top, f, satSolver=s)
@@ -181,12 +181,12 @@ def writeSwapChoiceConstraint(swapNum, layers, cm, physNum, logNum, numCnots,top
                     writeHardClause(path, top, [(True,"b", i-1, t, k), (False, "b", i, t, k), (False, "s", u, v, t, k)], physNum, logNum, numCnots, swapNum, satSolver=satSolver)
                 writeHardClause(path, top, [(False, "b", i, t, k), (True,"b", i+1, t, k)], physNum, logNum, numCnots, swapNum, satSolver=satSolver)
                 i += 1
-            writeHardClause(path, top, atLeastOne, physNum, logNum, numCnots, swapNum, satSolver=satSolver)   
+            writeHardClause(path, top, atLeastOne, physNum, logNum, numCnots, swapNum, satSolver=satSolver)
 
 
 # The chosen swap sequence determines the next mapping
 def writeSwapEffectConstraint(swapNum, layers, liveLog, physNum, cm, logNum, numCnots, top, path, satSolver=None):
-    allowedSwaps = np.append(np.argwhere(cm>0), [[0,0]], axis=0) 
+    allowedSwaps = np.append(np.argwhere(cm>0), [[0,0]], axis=0)
     swapSeqs = itertools.product(allowedSwaps, repeat=swapNum)
     for swapSeq in swapSeqs:
         indexed_swaps = list(enumerate(swapSeq))
@@ -265,7 +265,7 @@ def composeSwaps(swapSeq, physNum):
 
 
 
-## Conversion to MaxSat solver input format ## 
+## Conversion to MaxSat solver input format ##
 
 def flattenedIndex(lit, physNum, logNum, numCnots, swapNum):
     '''
@@ -354,14 +354,14 @@ def readMaxSatOutput(physNum, logNum, numCnots, swapNum, fname):
     with open(fname) as f:
         for line in f:
             if line.startswith("v"):
-                lits = line.split()[1:]      
+                lits = line.split()[1:]
                 return [unravel(int(lit), physNum, logNum, numCnots, swapNum) for lit in lits]
     return []
 
 def readPySatOutput(physNum, logNum, numCnots, swapNum, solver):
     lits = solver.get_model()
-    return [unravel(int(lit), physNum, logNum, numCnots, swapNum) for lit in lits] 
-    
+    return [unravel(int(lit), physNum, logNum, numCnots, swapNum) for lit in lits]
+
 
 
 
@@ -402,7 +402,7 @@ def swapsFromMaps(initial, final, mapStr):
                 if q  == q1 and p != p1 and not t_done:
                     swaps.append((p, p1, t))
                     t_done = True
-    return swaps 
+    return swaps
 
 ## Solving ##
 
@@ -415,7 +415,7 @@ def extractMappingCore(solver, initialMapping, logNum, physNum, numCnots, swapNu
             for clause in submap:
                 flatClause = flattenedClause(clause, physNum, logNum, numCnots, swapNum)
                 assump.append(int(flatClause[0]))
-            if not solver.solve(assumptions = assump): 
+            if not solver.solve(assumptions = assump):
                 return submap
 
 
@@ -439,7 +439,7 @@ def solve_bounded_above(progName, cm, swapNum, chunks, pname="test", sname="out"
     currentChunk = 0
     addedSwaps = [0 for _ in range(chunks)]
     negatedModels = [[] for i in range(chunks)]
-    solvers = [None for i in range(chunks)] 
+    solvers = [None for i in range(chunks)]
     while currentChunk < chunks:
         print("current chunk is", currentChunk)
         print("negated", len(negatedModels[currentChunk]), "models")
@@ -470,11 +470,11 @@ def solve_bounded_above(progName, cm, swapNum, chunks, pname="test", sname="out"
             t_s = time.process_time()
             solvers[currentChunk].solve()
             t_f = time.process_time()
-        if solvers[currentChunk].solve(): 
+        if solvers[currentChunk].solve():
             print("chunk", currentChunk, "solved")
             currentChunk = currentChunk+1
         else:
-                if len(negatedModels[currentChunk-1]) < 50*(addedSwaps[currentChunk]+1): 
+                if len(negatedModels[currentChunk-1]) < 50*(addedSwaps[currentChunk]+1):
                     print("got stuck on chunk", currentChunk, "backtracking to chunk", currentChunk-1)
                     prevAssignments = filter(lambda x : x[2] == prevSize-1, mappingVars(readPySatOutput, physNum, logNum, prevSize, swapNum+addedSwaps[currentChunk-1], solvers[currentChunk-1]))
                     negatedModel =  [(True, "x", phys, log, lastGate) for (phys, log, lastGate) in prevAssignments]
@@ -487,7 +487,7 @@ def solve_bounded_above(progName, cm, swapNum, chunks, pname="test", sname="out"
 
                 else:
                     print("got stuck on chunk", currentChunk, "repeatedly, increasing swap count")
-                    addedSwaps[currentChunk] += 1 
+                    addedSwaps[currentChunk] += 1
     a_star_time = 0
     cost = 0
     swaps = [[] for _ in range(chunks)]
@@ -561,7 +561,7 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
             print("generation and write time:", gen_write_f - gen_write_s)
             t_s = time.process_time()
             if time_wbo_max:
-                solve_time_rem = time_wbo_max-time_elapsed_wbo 
+                solve_time_rem = time_wbo_max-time_elapsed_wbo
             try:
                p = subprocess.Popen(["lib/Open-WBO-Inc/open-wbo-inc_release",   "-iterations="+str(iterations), pname+"-chnk"+str(currentChunk)+".cnf"],  stdout=open( sname + "-chnk0" + ".txt", "w"))
                p.wait(timeout=solve_time_rem/(chunks-currentChunk))
@@ -578,7 +578,7 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
             swapBack = []
             if qaoa and currentChunk == chunks-1:
                 initialSize = layers[chunkSize] - layers[0]
-                initialMapping =  filter(lambda x : x[2] == 0, mappingVars(readMaxSatOutput, physNum, logNum, initialSize, swapNum+addedSwaps[0], sname + "-chnk" + str(0) + ".txt")) 
+                initialMapping =  filter(lambda x : x[2] == 0, mappingVars(readMaxSatOutput, physNum, logNum, initialSize, swapNum+addedSwaps[0], sname + "-chnk" + str(0) + ".txt"))
                 swapBack = [[(False, "x", phys, log, currentSize-1)] for (phys, log, _) in initialMapping]
             gen_write_s = time.process_time()
             print("start:", layers[chunkSize*(currentChunk)])
@@ -588,7 +588,7 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
             print("generation and write time:", gen_write_f - gen_write_s)
             t_s = time.process_time()
             if time_wbo_max:
-                solve_time_rem = time_wbo_max- time_elapsed_wbo 
+                solve_time_rem = time_wbo_max- time_elapsed_wbo
             try:
                 p = subprocess.Popen(["lib/Open-WBO-Inc/open-wbo-inc_release", "-iterations="+str(iterations), pname+"-chnk"+str(currentChunk)+".cnf"], stdout=open(sname + "-chnk" + str(currentChunk) + ".txt", "w"))
                 p.wait(timeout=solve_time_rem/(chunks-currentChunk))
@@ -599,11 +599,11 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
             t_f = time.process_time()
             time_elapsed_wbo += t_f - t_s
         assignments = filter(lambda x : x[2] == currentSize-1, mappingVars(readMaxSatOutput, physNum, logNum, currentSize, swapNum+addedSwaps[currentChunk], sname + "-chnk" + str(currentChunk) + ".txt"))
-        if list(assignments): 
+        if list(assignments):
             print("chunk", currentChunk, "solved")
             currentChunk = currentChunk+1
         else:
-                if len(negatedModels[currentChunk-1]) < 50*(addedSwaps[currentChunk]+1): 
+                if len(negatedModels[currentChunk-1]) < 50*(addedSwaps[currentChunk]+1):
                     print("got stuck on chunk", currentChunk, "backtracking to chunk", currentChunk-1)
                     prevAssignments = filter(lambda x : x[2] == prevSize-1, mappingVars(readMaxSatOutput, physNum, logNum, prevSize, swapNum+addedSwaps[currentChunk-1], sname + "-chnk" + str(currentChunk-1) + ".txt"))
                     negatedModel =  [(True, "x", phys, log, lastGate) for (phys, log, lastGate) in prevAssignments]
@@ -616,7 +616,7 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
 
                 else:
                     print("got stuck on chunk", currentChunk, "repeatedly, increasing swap count")
-                    addedSwaps[currentChunk] += 1 
+                    addedSwaps[currentChunk] += 1
     cost=0
     for i in range(chunks):
         with open(sname + "-chnk" + str(i) + ".txt") as f:
@@ -690,7 +690,7 @@ def toQasm(physNum, logNum, numCnots, swapNum, solSource, progPath, cm, prevMap,
         mapKPhys = list(filter(lambda x: x[0][1] == k, physToLog.items()))
         assert(len(list(mapKPhys)) == len(set(mapKPhys))), "Invalid solution: non-function"
         swapsK = filter(lambda s: s[3] == k, swaps)
-        
+
         justPhys = [s[:2] for s in swapsK]
         for (phys1,phys2) in justPhys:
             assert([phys1, phys2] in edges.tolist()), "Invalid solution: bad swap"
@@ -698,9 +698,9 @@ def toQasm(physNum, logNum, numCnots, swapNum, solSource, progPath, cm, prevMap,
             for l in range(logNum):
                 if (l,k) in logToPhys.keys():
                     physPrev = logToPhys[(l,k-1)]
-                    assert(logToPhys[(l,k)] == composeSwaps(justPhys,physNum)[physPrev]), "Invalid solution: unexpected SWAP"      
+                    assert(logToPhys[(l,k)] == composeSwaps(justPhys,physNum)[physPrev]), "Invalid solution: unexpected SWAP"
     mappedCirc = qiskit.QuantumCircuit(circ.num_qubits)
-    cnotCount = 0 
+    cnotCount = 0
     for j in range(len(circ)):
         qubits = list(map(lambda q : qiskit.circuit.Qubit(q.register, logToPhys[(q.index,min(cnotCount, numCnots-1))]), circ[j][1]))
         if circ[j][0].name == 'cx':
@@ -717,7 +717,7 @@ def toQasm(physNum, logNum, numCnots, swapNum, solSource, progPath, cm, prevMap,
         mappedCirc.append(circ[j][0],qubits)
     finalMap = list(filter(lambda x: x[0][1] == numCnots, logToPhys.items()))
     return (mappedCirc, i, finalMap)
-          
+
 def toQasmFF(progName, cm, swapNum, chunks, solSource,  swaps=None):
     pointer = 0
     physNum = len(cm)
@@ -731,16 +731,16 @@ def toQasmFF(progName, cm, swapNum, chunks, solSource,  swaps=None):
     circ = qiskit.QuantumCircuit(len(cm), len(cm))
     for i in range(chunks):
         is_last = False
-        if i == chunks - 1: 
+        if i == chunks - 1:
             end = numCnots
             is_last = True
-        else: 
+        else:
             end = layers[chunkSize*(i+1)]
         currentSize = end - layers[chunkSize*(i)]
         if type(solSource) is str:  # i.e we are reading from a file
-            (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, solSource + "-chnk" + str(i) + ".txt", progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None) 
+            (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, solSource + "-chnk" + str(i) + ".txt", progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None)
         else: # we are reading from solvers
-            (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, solSource[i], progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None) 
+            (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, solSource[i], progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None)
         pointer = gates
         prevMap = finalMap
         circ.compose(mapped_circ, inplace=True)
@@ -766,12 +766,12 @@ def transpile(progname, cm, swapNum=1, cnfname='test', sname='out', slice_size=2
     elif bounded_above:
      results = solve_bounded_above(progname, cm, swapNum, chunks, pname=cnfname, sname=sname)
      return ((results['cost'], results['a_star_time']), toQasmFF(os.path.join(os.path.split(progname)[0], "qiskit-"+os.path.split(progname)[1]),  cm, swapNum, chunks, results['solvers'], swaps=results['swaps']))
-    else: 
+    else:
       results = solve(progname, cm, swapNum, chunks, pname=cnfname, sname=sname, _routing=False, _weighted=weighted)
       return ((results['cost'], results['time_wbo'], results['a_star_time']), toQasmFF(os.path.join(os.path.split(progname)[0], "qiskit-"+os.path.split(progname)[1]),  cm, swapNum, chunks, sname, swaps=results['swaps']))
 
 
-        
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -784,7 +784,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_route",  action="store_true", help="SolveSwapsFF routing")
     parser.add_argument("--weighted",  action="store_true", help="SolveSwapsFF weighting on dist")
     parser.add_argument("--err", choices=['fake_tokyo', 'fake_linear'], help="olsq: 2 qubit gate error rates")
-    
+
     archs =  {
         "tokyo" : architectures.ibmTokyo,
         "toronto" : architectures.ibmToronto,
@@ -797,6 +797,13 @@ if __name__ == "__main__":
         'tokyo_drop_6' : architectures.tokyo_drop_worst_n(6, architectures.tokyo_error_map()),
         'tokyo_drop_10' : architectures.tokyo_drop_worst_n(10, architectures.tokyo_error_map()),
         'tokyo_drop_14' : architectures.tokyo_drop_worst_n(14, architectures.tokyo_error_map()),
+        'grid_16' : architectures.gridArch(4),
+        'grid_25' : architectures.gridArch(5),
+        'grid_36' : architectures.gridArch(6),
+        'circle_16': architectures.circleArch(16),
+        'circle_25': architectures.circleArch(25),
+        'circle_36': architectures.circleArch(36),
+        'aspen_11_38': architectures.rigettiAspen11Arch()
     }
     error_rates = {
         'fake_tokyo' : architectures.tokyo_error_list(),
@@ -811,8 +818,9 @@ if __name__ == "__main__":
     base, _ = os.path.splitext(os.path.basename(args.prog))
     #print(transpile(args.prog, arch, 1, "prob_"+base, "sol_"+base, slice_size=args.k, max_sat_time=args.timeout, routing= not args.no_route, weighted= args.weighted, calibrationData=error_rates[args.err] if args.err else None, bounded_above=False ))
     (stats, qasm) = transpile(args.prog, arch, 1, "prob_"+base, "sol_"+base, slice_size=args.k, max_sat_time=args.timeout, routing= not args.no_route, weighted= args.weighted, calibrationData=error_rates[args.err] if args.err else None, bounded_above=True )
-    print(stats)
-    out_file = args.output_path if args.output_path else "mapped_"+os.path.basename(args.prog)
+
+    if not os.path.exists(args.output_path):
+        os.makedirs(args.output_path)
+    out_file = os.path.join(args.output_path, "mapped_"+os.path.basename(args.prog))
     with open(out_file, "w") as f:
-        f.write(qasm) 
- 
+        f.write(qasm)

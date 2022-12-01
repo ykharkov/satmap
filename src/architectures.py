@@ -2,6 +2,8 @@ import numpy as np
 import json
 import random
 from qiskit.test.mock import FakeTokyo
+import networkx as nx
+from networkx.linalg.graphmatrix import adjacency_matrix
 
 triangle = np.array([[0,1,0], [0,0,1], [1,0,0]])
 ibmqx4 = np.array([[0,0,0,0,0],[1,0,0,0,0], [1,1,0,0,0], [0,0,1,0,1],[0,0,1,0,0]])
@@ -22,10 +24,73 @@ ibmToronto = np.array([[0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[
               [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0],
               [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0]] )
 
-ibmTokyo = np.array([[0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0], [1,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0], [0,1,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0], [0,0,1,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0], [0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0], 
-                     [1,0,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0], [0,1,1,0,0,1,0,1,0,0,1,1,0,0,0,0,0,0,0,0], [0,1,1,0,0,0,1,0,1,0,0,0,1,1,0,0,0,0,0,0], [0,0,0,1,1,0,0,1,0,1,0,0,1,1,0,0,0,0,0,0], [0,0,0,1,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0], 
-                     [0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0], [0,0,0,0,0,1,1,0,0,0,1,0,1,0,0,0,1,1,0,0], [0,0,0,0,0,0,0,1,1,0,0,1,0,1,0,0,1,1,0,0], [0,0,0,0,0,0,0,1,1,0,0,0,1,0,1,0,0,0,1,1], [0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,1], 
+ibmTokyo = np.array([[0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0], [1,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0], [0,1,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0], [0,0,1,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0], [0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0],
+                     [1,0,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0], [0,1,1,0,0,1,0,1,0,0,1,1,0,0,0,0,0,0,0,0], [0,1,1,0,0,0,1,0,1,0,0,0,1,1,0,0,0,0,0,0], [0,0,0,1,1,0,0,1,0,1,0,0,1,1,0,0,0,0,0,0], [0,0,0,1,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0],
+                     [0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0], [0,0,0,0,0,1,1,0,0,0,1,0,1,0,0,0,1,1,0,0], [0,0,0,0,0,0,0,1,1,0,0,1,0,1,0,0,1,1,0,0], [0,0,0,0,0,0,0,1,1,0,0,0,1,0,1,0,0,0,1,1], [0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,1],
                      [0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0], [0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,1,0,0], [0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,0,1,0], [0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,1], [0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,0]])
+
+aspen_11_edges = [
+            [0, 1],
+            [0, 7],
+            [1, 14],
+            [1, 2],
+            [8, 9],
+            [8, 15],
+            [9, 10],
+            [9, 22],
+            [10, 11],
+            [10, 21],
+            [11, 12],
+            [12, 13],
+            [13, 14],
+            [14, 15],
+            [2, 13],
+            [2, 3],
+            [16, 17],
+            [16, 23],
+            [17, 18],
+            [17, 30],
+            [19, 20],
+            [20, 21],
+            [21, 22],
+            [22, 23],
+            [3, 4],
+            [24, 25],
+            [24, 31],
+            [25, 26],
+            [25, 36],
+            [26, 27],
+            [26, 35],
+            [27, 28],
+            [28, 29],
+            [29, 30],
+            [30, 31],
+            [4, 5],
+            [32, 33],
+            [33, 34],
+            [34, 35],
+            [35, 36],
+            [36, 37],
+            [5, 6],
+            [6, 7],
+        ]
+
+def gridArch(n):
+    graph = nx.grid_2d_graph(n, n)
+    graph = nx.convert_node_labels_to_integers(graph)
+    adj_mat = adjacency_matrix(graph)
+    return adj_mat
+
+def circleArch(n):
+    graph = nx.cycle_graph(num_qubits)
+    adj_mat = adjacency_matrix(graph)
+    return adj_mat
+
+def rigettiAspen11Arch():
+    graph = nx.Graph()
+    graph.add_edges_from(aspen_11_edges)
+    adj_mat = adjacency_matrix(graph)
+    return adj_mat
 
 def linearArch(n):
     graph = np.zeros((n,n))
@@ -51,7 +116,7 @@ def neighbors(i,j,n):
     columnRight =  (j%n)  == (i % n + 1)
     if (i // n) %  2 == 0:
         return oneRowOver and (sameColumn or columnLeft)
-    else:   
+    else:
         return oneRowOver and (sameColumn or columnRight)
 
 def knockoutNQubits(arr, n):
@@ -59,7 +124,7 @@ def knockoutNQubits(arr, n):
     faulty = random.sample(range(len(arr)), n)
     newCM = np.delete(newCM, faulty, axis=0)
     newCM = np.delete(newCM, faulty, axis=1)
-    return 
+    return
 
 def tokyo_all_diags():
     graph = np.copy(ibmTokyo)
@@ -124,8 +189,8 @@ def tokyo_drop_worst_n(n, err_rates_map):
         if (u,v) in worst_n:
             graph[u][v] = 0
             graph[v][u] = 0
-    return graph 
-                
+    return graph
+
 def generateMQTFile(cm, fname):
     with open(fname, "w") as f:
         f.write(str(len(cm)) + "\n" )
@@ -133,7 +198,7 @@ def generateMQTFile(cm, fname):
             f.write(str(u) + " " + str(v) + "\n" )
 
 
-def generateEnfFile(cm, fname): 
+def generateEnfFile(cm, fname):
     obj = {
         "qubits" : len(cm),
         "registers" : [{"name": "q" , "qubits": len(cm)}],
@@ -142,9 +207,9 @@ def generateEnfFile(cm, fname):
     with open(fname, "w") as f:
         json.dump(obj, f)
 
-        
+
 def tokyo_error_list():
-    return list(tokyo_error_map().values()) 
+    return list(tokyo_error_map().values())
 
 def tokyo_error_map():
     AVG = 0.03130722830688227
@@ -164,7 +229,7 @@ def fake_linear_error_map():
     return dict(zip(edges, vals))
 
 def fake_linear_error_list():
-    return list(fake_linear_error_map().values()) 
+    return list(fake_linear_error_map().values())
 
 def write_triq_files(error_map):
     with open("ibmtokyo_T.rlb", 'w') as f:
@@ -179,4 +244,3 @@ def write_triq_files(error_map):
         f.write("20\n")
         for i in range(20):
             f.write(str(i) + " 1.0" + "\n")
-    
