@@ -82,7 +82,7 @@ def gridArch(n):
     return adj_mat
 
 def circleArch(n):
-    graph = nx.cycle_graph(num_qubits)
+    graph = nx.cycle_graph(n)
     adj_mat = adjacency_matrix(graph)
     return adj_mat
 

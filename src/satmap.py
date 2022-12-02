@@ -797,13 +797,13 @@ if __name__ == "__main__":
         'tokyo_drop_6' : architectures.tokyo_drop_worst_n(6, architectures.tokyo_error_map()),
         'tokyo_drop_10' : architectures.tokyo_drop_worst_n(10, architectures.tokyo_error_map()),
         'tokyo_drop_14' : architectures.tokyo_drop_worst_n(14, architectures.tokyo_error_map()),
-        'grid_16' : architectures.gridArch(4),
-        'grid_25' : architectures.gridArch(5),
-        'grid_36' : architectures.gridArch(6),
-        'circle_16': architectures.circleArch(16),
-        'circle_25': architectures.circleArch(25),
-        'circle_36': architectures.circleArch(36),
-        'aspen_11_38': architectures.rigettiAspen11Arch()
+        'grid_16' : architectures.gridArch(4).toarray(),
+        'grid_25' : architectures.gridArch(5).toarray(),
+        'grid_36' : architectures.gridArch(6).toarray(),
+        'circle_16': architectures.circleArch(16).toarray(),
+        'circle_25': architectures.circleArch(25).toarray(),
+        'circle_36': architectures.circleArch(36).toarray(),
+        'aspen_11_38': architectures.rigettiAspen11Arch().toarray()
     }
     error_rates = {
         'fake_tokyo' : architectures.tokyo_error_list(),
