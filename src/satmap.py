@@ -263,8 +263,6 @@ def composeSwaps(swapSeq, physNum):
         applySwap(swap, current)
     return current
 
-
-
 ## Conversion to MaxSat solver input format ##
 
 def flattenedIndex(lit, physNum, logNum, numCnots, swapNum):
@@ -450,7 +448,7 @@ def solve_bounded_above(progName, cm, swapNum, chunks, pname="test", sname="out"
         if currentChunk == 0:
             swapBack = []
             gen_write_s = time.process_time()
-            solvers[currentChunk] = generateAndWriteClauses(logNum, cnots[:end], cnots[:end], cm, swapNum+addedSwaps[0], negatedModels[0] + swapBack, pname+"-chnk"+str(currentChunk)+".cnf", boundedAbove=True, routing=False)
+            solvers[currentChunk] = generateAndWriteClauses(logNum, cnots[:end], cnots[:end], cm, swapNum+addedSwaps[0], negatedModels[0] + swapBack, "tmp/"+pname+"-chnk"+str(currentChunk)+".cnf", boundedAbove=True, routing=False)
             gen_write_f = time.process_time()
             print("generation and write time:", gen_write_f - gen_write_s)
             t_s = time.process_time()
@@ -464,7 +462,7 @@ def solve_bounded_above(progName, cm, swapNum, chunks, pname="test", sname="out"
             gen_write_s = time.process_time()
             print("start:", layers[chunkSize*(currentChunk)])
             print("end:", end)
-            solvers[currentChunk] = generateAndWriteClauses(logNum, cnots[:end], cnots[layers[chunkSize*(currentChunk)]:end], cm, swapNum+addedSwaps[currentChunk], consistencyClauses+negatedModels[currentChunk]+swapBack,  pname+"-chnk"+str(currentChunk)+".cnf", boundedAbove=True, routing=False)
+            solvers[currentChunk] = generateAndWriteClauses(logNum, cnots[:end], cnots[layers[chunkSize*(currentChunk)]:end], cm, swapNum+addedSwaps[currentChunk], consistencyClauses+negatedModels[currentChunk]+swapBack,  "tmp/"+pname+"-chnk"+str(currentChunk)+".cnf", boundedAbove=True, routing=False)
             gen_write_f = time.process_time()
             print("generation and write time:", gen_write_f - gen_write_s)
             t_s = time.process_time()
@@ -523,6 +521,7 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
     logNum = extractQbits(progName)
     return_results = {}
     hack = qiskit.QuantumCircuit.from_qasm_file(progName)
+    hack.remove_final_measurements()
     (head, tail) = os.path.split(progName)
     with open(os.path.join(head, "qiskit-" + tail), "w") as f:
         f.write(hack.qasm())
@@ -531,6 +530,9 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
     numCnots = len(cnots)
 
     layers= range(len(cnots))
+    # chunkSize = len(layers)//chunks if chunks!=0 else len(layers)
+
+    chunks = max(1, chunks)
     chunkSize = len(layers)//chunks
 
     if(DEBUG_LOCAL and DEBUG_GLOBAL):
@@ -556,14 +558,14 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
             if qaoa and currentChunk == chunks-1:
                 swapBack = [[(False, "x", phys, log, currentSize-1), (True, "x", phys, log, 0) ] for phys in range(physNum) for log in range(logNum)] +  [[(True, "x", phys, log, currentSize-1), (False, "x", phys, log, 0) ] for phys in range(physNum) for log in range(logNum)]
             gen_write_s = time.process_time()
-            s= generateAndWriteClauses(logNum, cnots[:end], cnots[:end], cm, swapNum+addedSwaps[0], negatedModels[0] + swapBack, pname+"-chnk"+str(currentChunk)+".cnf", routing=_routing, weighted =_weighted, calibrationData=_calibrationData)
+            s= generateAndWriteClauses(logNum, cnots[:end], cnots[:end], cm, swapNum+addedSwaps[0], negatedModels[0] + swapBack, "tmp/"+pname+"-chnk"+str(currentChunk)+".cnf", routing=_routing, weighted =_weighted, calibrationData=_calibrationData)
             gen_write_f = time.process_time()
             print("generation and write time:", gen_write_f - gen_write_s)
             t_s = time.process_time()
             if time_wbo_max:
                 solve_time_rem = time_wbo_max-time_elapsed_wbo
             try:
-               p = subprocess.Popen(["lib/Open-WBO-Inc/open-wbo-inc_release",   "-iterations="+str(iterations), pname+"-chnk"+str(currentChunk)+".cnf"],  stdout=open( sname + "-chnk0" + ".txt", "w"))
+               p = subprocess.Popen(["lib/Open-WBO-Inc/open-wbo-inc_release",   "-iterations="+str(iterations), "tmp/"+pname+"-chnk"+str(currentChunk)+".cnf"],  stdout=open( "tmp/"+sname + "-chnk0" + ".txt", "w"))
                p.wait(timeout=solve_time_rem/(chunks-currentChunk))
             except subprocess.TimeoutExpired:
                 print("exiting open-wbo because of solve time alloted...")
@@ -573,24 +575,24 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
             time_elapsed_wbo += t_f - t_s
         else:
             prevSize = layers[chunkSize*currentChunk] - layers[chunkSize*(currentChunk-1)]
-            prevAssignments = filter(lambda x : x[2] == prevSize-1, mappingVars(readMaxSatOutput, physNum, logNum, prevSize, swapNum+addedSwaps[currentChunk-1], sname + "-chnk" + str(currentChunk-1) + ".txt"))
+            prevAssignments = filter(lambda x : x[2] == prevSize-1, mappingVars(readMaxSatOutput, physNum, logNum, prevSize, swapNum+addedSwaps[currentChunk-1], "tmp/"+sname + "-chnk" + str(currentChunk-1) + ".txt"))
             consistencyClauses = [[(False, "x", phys, log, 0)] for (phys, log, _) in prevAssignments]
             swapBack = []
             if qaoa and currentChunk == chunks-1:
                 initialSize = layers[chunkSize] - layers[0]
-                initialMapping =  filter(lambda x : x[2] == 0, mappingVars(readMaxSatOutput, physNum, logNum, initialSize, swapNum+addedSwaps[0], sname + "-chnk" + str(0) + ".txt"))
+                initialMapping =  filter(lambda x : x[2] == 0, mappingVars(readMaxSatOutput, physNum, logNum, initialSize, swapNum+addedSwaps[0], "tmp/"+ sname + "-chnk" + str(0) + ".txt"))
                 swapBack = [[(False, "x", phys, log, currentSize-1)] for (phys, log, _) in initialMapping]
             gen_write_s = time.process_time()
             print("start:", layers[chunkSize*(currentChunk)])
             print("end:", end)
-            s = generateAndWriteClauses(logNum, cnots[:end], cnots[layers[chunkSize*(currentChunk)]:end], cm, swapNum+addedSwaps[currentChunk], consistencyClauses+negatedModels[currentChunk]+swapBack,  pname+"-chnk"+str(currentChunk)+".cnf", routing=_routing, weighted=_weighted, calibrationData=_calibrationData)
+            s = generateAndWriteClauses(logNum, cnots[:end], cnots[layers[chunkSize*(currentChunk)]:end], cm, swapNum+addedSwaps[currentChunk], consistencyClauses+negatedModels[currentChunk]+swapBack,  "tmp/"+pname+"-chnk"+str(currentChunk)+".cnf", routing=_routing, weighted=_weighted, calibrationData=_calibrationData)
             gen_write_f = time.process_time()
             print("generation and write time:", gen_write_f - gen_write_s)
             t_s = time.process_time()
             if time_wbo_max:
                 solve_time_rem = time_wbo_max- time_elapsed_wbo
             try:
-                p = subprocess.Popen(["lib/Open-WBO-Inc/open-wbo-inc_release", "-iterations="+str(iterations), pname+"-chnk"+str(currentChunk)+".cnf"], stdout=open(sname + "-chnk" + str(currentChunk) + ".txt", "w"))
+                p = subprocess.Popen(["lib/Open-WBO-Inc/open-wbo-inc_release", "-iterations="+str(iterations), "tmp/"+pname+"-chnk"+str(currentChunk)+".cnf"], stdout=open("tmp/"+sname + "-chnk" + str(currentChunk) + ".txt", "w"))
                 p.wait(timeout=solve_time_rem/(chunks-currentChunk))
             except subprocess.TimeoutExpired:
                 print("exiting open-wbo because of solve time alloted...")
@@ -598,14 +600,14 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
                 time.sleep(10)
             t_f = time.process_time()
             time_elapsed_wbo += t_f - t_s
-        assignments = filter(lambda x : x[2] == currentSize-1, mappingVars(readMaxSatOutput, physNum, logNum, currentSize, swapNum+addedSwaps[currentChunk], sname + "-chnk" + str(currentChunk) + ".txt"))
+        assignments = filter(lambda x : x[2] == currentSize-1, mappingVars(readMaxSatOutput, physNum, logNum, currentSize, swapNum+addedSwaps[currentChunk], "tmp/"+sname + "-chnk" + str(currentChunk) + ".txt"))
         if list(assignments):
             print("chunk", currentChunk, "solved")
             currentChunk = currentChunk+1
         else:
                 if len(negatedModels[currentChunk-1]) < 50*(addedSwaps[currentChunk]+1):
                     print("got stuck on chunk", currentChunk, "backtracking to chunk", currentChunk-1)
-                    prevAssignments = filter(lambda x : x[2] == prevSize-1, mappingVars(readMaxSatOutput, physNum, logNum, prevSize, swapNum+addedSwaps[currentChunk-1], sname + "-chnk" + str(currentChunk-1) + ".txt"))
+                    prevAssignments = filter(lambda x : x[2] == prevSize-1, mappingVars(readMaxSatOutput, physNum, logNum, prevSize, swapNum+addedSwaps[currentChunk-1], "tmp/"+sname + "-chnk" + str(currentChunk-1) + ".txt"))
                     negatedModel =  [(True, "x", phys, log, lastGate) for (phys, log, lastGate) in prevAssignments]
                     print(negatedModel)
                     core = extractMappingCore(s, consistencyClauses,  logNum, len(cm), currentSize, swapNum+addedSwaps[currentChunk])
@@ -619,7 +621,7 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
                     addedSwaps[currentChunk] += 1
     cost=0
     for i in range(chunks):
-        with open(sname + "-chnk" + str(i) + ".txt") as f:
+        with open(os.path.join("tmp/"+sname + "-chnk" + str(i) + ".txt")) as f:
             for line in f:
                 if line.startswith("o"):
                     count = int(line.split()[1])
@@ -635,8 +637,8 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
             else: end = layers[chunkSize*(i+1)]
             size = end - layers[chunkSize*(i)]
             for k in range(1,size):
-                initial = list(filter(lambda x : x[2] == k-1, mappingVars(readMaxSatOutput, physNum, logNum, size, swapNum+addedSwaps[i], sname + "-chnk" + str(i) + ".txt")))
-                final = list(filter(lambda x : x[2] == k, mappingVars(readMaxSatOutput, physNum, logNum, size, swapNum+addedSwaps[i], sname + "-chnk" + str(i) + ".txt")))
+                initial = list(filter(lambda x : x[2] == k-1, mappingVars(readMaxSatOutput, physNum, logNum, size, swapNum+addedSwaps[i], "tmp/"+sname + "-chnk" + str(i) + ".txt")))
+                final = list(filter(lambda x : x[2] == k, mappingVars(readMaxSatOutput, physNum, logNum, size, swapNum+addedSwaps[i], "tmp/"+sname + "-chnk" + str(i) + ".txt")))
                 writeForRouting(initial, final, cm)
                 a_star_start = time.process_time()
                 p = subprocess.run(["./route","toHaskell.txt"], stdout=PIPE )
@@ -726,7 +728,9 @@ def toQasmFF(progName, cm, swapNum, chunks, solSource,  swaps=None):
     numCnots = len(cnots)
     # layers = getLayers(cnots)
     layers = range(len(cnots))
+    # chunkSize = len(layers)//chunks if chunks!=0 else len(layers)
     chunkSize = len(layers)//chunks
+
     prevMap = None
     circ = qiskit.QuantumCircuit(len(cm), len(cm))
     for i in range(chunks):
@@ -738,7 +742,7 @@ def toQasmFF(progName, cm, swapNum, chunks, solSource,  swaps=None):
             end = layers[chunkSize*(i+1)]
         currentSize = end - layers[chunkSize*(i)]
         if type(solSource) is str:  # i.e we are reading from a file
-            (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, solSource + "-chnk" + str(i) + ".txt", progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None)
+            (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, "tmp/"+solSource + "-chnk" + str(i) + ".txt", progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None)
         else: # we are reading from solvers
             (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, solSource[i], progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None)
         pointer = gates
@@ -776,7 +780,7 @@ def transpile(progname, cm, swapNum=1, cnfname='test', sname='out', slice_size=2
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("prog", help="path to input program file")
-    parser.add_argument("-o_p", "--output_path", help="where to write the resulting qasm")
+    parser.add_argument("-o_p", "--output_path", default="./tmp", help="where to write the resulting qasm")
     parser.add_argument("-a", "--arch", help="name of qc architecture")
     parser.add_argument("-to", "--timeout", type=int, default=1800,help="maximum run time for a mapper in seconds")
     parser.add_argument("--k", type=int, default=25, help="SolveSwapsFF: k-value")
@@ -810,6 +814,10 @@ if __name__ == "__main__":
         'fake_linear' : architectures.fake_linear_error_list()
     }
     args = parser.parse_args()
+    if not os.path.exists(args.output_path):
+        os.makedirs(args.output_path)
+    if not os.path.exists("tmp"):
+        os.makedirs("tmp")
     if args.arch in archs:
         arch = archs[args.arch]
     else:
@@ -818,9 +826,8 @@ if __name__ == "__main__":
     base, _ = os.path.splitext(os.path.basename(args.prog))
     #print(transpile(args.prog, arch, 1, "prob_"+base, "sol_"+base, slice_size=args.k, max_sat_time=args.timeout, routing= not args.no_route, weighted= args.weighted, calibrationData=error_rates[args.err] if args.err else None, bounded_above=False ))
     (stats, qasm) = transpile(args.prog, arch, 1, "prob_"+base, "sol_"+base, slice_size=args.k, max_sat_time=args.timeout, routing= not args.no_route, weighted= args.weighted, calibrationData=error_rates[args.err] if args.err else None, bounded_above=True )
+    print("num_swaps={}".format(stats["cost"]))
 
-    if not os.path.exists(args.output_path):
-        os.makedirs(args.output_path)
     out_file = os.path.join(args.output_path, "mapped_"+os.path.basename(args.prog))
     with open(out_file, "w") as f:
         f.write(qasm)
