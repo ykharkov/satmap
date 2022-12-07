@@ -27,7 +27,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     file_path = args.input
     circ = QuantumCircuit().from_qasm_file(file_path)
-
+    circ.remove_final_measurements()
     num_qubits = circ.num_qubits
     num_2q_gates = get_num_gates_by_operands(circ, 2)
 
