@@ -4,6 +4,12 @@ max_qubits=16
 max_gates=30
 
 HW_NAMES=("grid_16" "circle_16")
+CSV_FILE="results/results.csv"
+RESULTS_DIRNAME="results/"
+
+mkdir -p $RESULTS_DIRNAME
+
+echo "circuit_name,num_swaps,runtime" > $CSV_FILE
 
 for HW_NAME in ${HW_NAMES[@]}; do
   for CIRC_CLASS_NAME in $(ls $INPUT_DIR); do
@@ -13,15 +19,8 @@ for HW_NAME in ${HW_NAMES[@]}; do
       echo $FILE
 
       echo "HARDWARE_NAME" $HW_NAME
-      CSV_FILE="results/results.csv"
+
       echo "CSV file path" $CSV_FILE
-
-      RESULTS_DIRNAME="results/"
-
-      mkdir -p $RESULTS_DIRNAME
-
-      echo "circuit_name,num_swaps,runtime" > $CSV_FILE
-      mkdir -p $RESULTS_DIRNAME
 
       circ_filter_output=$(python3 src/circuit_filter.py -i $FILE)
 
@@ -47,7 +46,8 @@ for HW_NAME in ${HW_NAMES[@]}; do
 
       echo "num_swaps" $SWAP
 
-      echo $FILE","$SWAP","$RUNTIME >> $CSV_FILE
+      BASENAME_FILE=$(basename $FILE)
+      echo $HW_NAME"_"$BASENAME_FILE","$SWAP","$RUNTIME >> $CSV_FILE
       echo "Elapsed (ms)" $RUNTIME
       echo "Saved results in" $CSV_FILE
 
