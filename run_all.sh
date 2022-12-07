@@ -6,47 +6,54 @@ max_gates=30
 HW_NAMES=("grid_16" "circle_16")
 
 for HW_NAME in ${HW_NAMES[@]}; do
-  for FILE in $(ls $INPUT_DIR)"/".qasm; do
-    echo $FILE
+  for CIRC_CLASS_NAME in $(ls $INPUT_DIR); do
+    echo "CIRC_CLASS_NAME" $CIRC_CLASS_NAME
 
-    echo "HARDWARE_NAME" $HW_NAME
-    CSV_FILE="results/"$HW_NAME"/results.csv"
-    echo "CSV file path" $CSV_FILE
+    for FILE in $INPUT_DIR"/"$CIRC_CLASS_NAME"/"*.qasm; do
+      echo $FILE
 
-    RESULTS_DIRNAME="results/"$HW_NAME
+      echo "HARDWARE_NAME" $HW_NAME
+      CSV_FILE="results/results.csv"
+      echo "CSV file path" $CSV_FILE
 
-    mkdir -p $RESULTS_DIRNAME
+      RESULTS_DIRNAME="results/"
 
-    echo "circuit_name,num_swaps,runtime" > $CSV_FILE
-    mkdir -p $RESULTS_DIRNAME
+      mkdir -p $RESULTS_DIRNAME
 
-    circ_filter_out=$(python3 src/circuit_filter.py -i $INPUT_DIR"/"$FILE)
-    echo "circ_filter_out" $circ_filter_out
-    num_qubits=$(echo $circ_filter_out | awk -F'[^0-9]+' '{ print $1 }')
-    num_gates=$(echo $circ_filter_out | awk -F'[^0-9]+' '{ print $2 }')
+      echo "circuit_name,num_swaps,runtime" > $CSV_FILE
+      mkdir -p $RESULTS_DIRNAME
 
-    echo "num_gates" $num_gates
-    echo "num_qubits" $num_qubits
-    # Check if the input .qmap file satisfies criteria: max_qubits, max_gates
-    if [ $num_qubits -gt $max_qubits ] || [ $num_gates -gt $max_gates ]; then
-      echo "Input circuit is too large. Skipping..."
-      continue
-    fi
+      circ_filter_output=$(python3 src/circuit_filter.py -i $FILE)
 
-    start=$(python3 -c "import time; print(int(1e3*time.time()))")
-    output=$(python3 -W ignore src/satmap.py $INPUT_DIR"/"$FILE --arch $HW_NAME -to 600 --k 10000 --output_path tmp)
-    end=$(python3 -c "import time; print(int(1e3*time.time()))")
+      num_qubits=$(echo $circ_filter_output | awk -F'[^0-9]+' '{ print $1 }')
+      num_gates=$(echo $circ_filter_output | awk -F'[^0-9]+' '{ print $2 }')
 
-    RUNTIME=$((end-start))
+      echo "num_gates" $num_gates
+      echo "num_qubits" $num_qubits
+      # Check if the input .qmap file satisfies criteria: max_qubits, max_gates
+      if [ $num_qubits -gt $max_qubits ] || [ $num_gates -gt $max_gates ]; then
+        echo "Input circuit is too large. Skipping..."
+        continue
+      fi
 
-    SWAP=$output | grep -o -E "[0-9]+"
+      start=$(python3 -c "import time; print(int(1e3*time.time()))")
+      output=$(python3 -W ignore src/satmap.py $FILE --arch $HW_NAME -to 600 --k 10000 --output_path tmp)
+      end=$(python3 -c "import time; print(int(1e3*time.time()))")
 
-    echo $FILE","$SWAP","$RUNTIME >> $CSV_FILE
-    echo "Elapsed (ms)" $RUNTIME
-    echo "Saved results in" $CSV_FILE
+      RUNTIME=$((end-start))
 
-    echo "============================="
+      echo "output" $output
+      SWAP=$(echo $output | grep "num_swaps=" | grep -o -E "[0-9]+")
 
+      echo "num_swaps" $SWAP
+
+      echo $FILE","$SWAP","$RUNTIME >> $CSV_FILE
+      echo "Elapsed (ms)" $RUNTIME
+      echo "Saved results in" $CSV_FILE
+
+      echo "============================="
+
+    done
     echo "============================="
   done
 done

@@ -439,18 +439,18 @@ def solve_bounded_above(progName, cm, swapNum, chunks, pname="test", sname="out"
     negatedModels = [[] for i in range(chunks)]
     solvers = [None for i in range(chunks)]
     while currentChunk < chunks:
-        print("current chunk is", currentChunk)
-        print("negated", len(negatedModels[currentChunk]), "models")
+        # print("current chunk is", currentChunk)
+        # print("negated", len(negatedModels[currentChunk]), "models")
         if currentChunk == chunks - 1: end = numCnots
         else: end = layers[chunkSize*(currentChunk+1)]
         currentSize = end - layers[chunkSize*(currentChunk)]
-        print("current size:", currentSize)
+        # print("current size:", currentSize)
         if currentChunk == 0:
             swapBack = []
             gen_write_s = time.process_time()
             solvers[currentChunk] = generateAndWriteClauses(logNum, cnots[:end], cnots[:end], cm, swapNum+addedSwaps[0], negatedModels[0] + swapBack, "tmp/"+pname+"-chnk"+str(currentChunk)+".cnf", boundedAbove=True, routing=False)
             gen_write_f = time.process_time()
-            print("generation and write time:", gen_write_f - gen_write_s)
+            # print("generation and write time:", gen_write_f - gen_write_s)
             t_s = time.process_time()
             solvers[currentChunk].solve()
             t_f = time.process_time()
@@ -543,12 +543,12 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
     negatedModels = [[] for i in range(chunks)]
     time_elapsed_wbo = 0
     while currentChunk < chunks:
-        print("current chunk is", currentChunk)
-        print("negated", len(negatedModels[currentChunk]), "models")
+        # print("current chunk is", currentChunk)
+        # print("negated", len(negatedModels[currentChunk]), "models")
         if currentChunk == chunks - 1: end = numCnots
         else: end = layers[chunkSize*(currentChunk+1)]
         currentSize = end - layers[chunkSize*(currentChunk)]
-        print("current size:", currentSize)
+        # print("current size:", currentSize)
         if negatedModels[currentChunk]:
             if(DEBUG_LOCAL and DEBUG_GLOBAL):
                 print(set.intersection(*[set(l)
@@ -560,7 +560,7 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
             gen_write_s = time.process_time()
             s= generateAndWriteClauses(logNum, cnots[:end], cnots[:end], cm, swapNum+addedSwaps[0], negatedModels[0] + swapBack, "tmp/"+pname+"-chnk"+str(currentChunk)+".cnf", routing=_routing, weighted =_weighted, calibrationData=_calibrationData)
             gen_write_f = time.process_time()
-            print("generation and write time:", gen_write_f - gen_write_s)
+            # print("generation and write time:", gen_write_f - gen_write_s)
             t_s = time.process_time()
             if time_wbo_max:
                 solve_time_rem = time_wbo_max-time_elapsed_wbo
@@ -602,7 +602,7 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
             time_elapsed_wbo += t_f - t_s
         assignments = filter(lambda x : x[2] == currentSize-1, mappingVars(readMaxSatOutput, physNum, logNum, currentSize, swapNum+addedSwaps[currentChunk], "tmp/"+sname + "-chnk" + str(currentChunk) + ".txt"))
         if list(assignments):
-            print("chunk", currentChunk, "solved")
+            # print("chunk", currentChunk, "solved")
             currentChunk = currentChunk+1
         else:
                 if len(negatedModels[currentChunk-1]) < 50*(addedSwaps[currentChunk]+1):
