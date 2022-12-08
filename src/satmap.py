@@ -523,9 +523,9 @@ def solve(progName, cm, swapNum, chunks, iterations=100, time_wbo_max = 600, qao
     hack = qiskit.QuantumCircuit.from_qasm_file(progName)
     hack.remove_final_measurements()
     (head, tail) = os.path.split(progName)
-    with open(os.path.join(head, "tmpqiskit-" + tail), "w") as f:
+    with open(os.path.join('tmp', "tmpqiskit-" + tail), "w") as f:
         f.write(hack.qasm())
-    cnots = extractCNOTs(os.path.join(head, "tmpqiskit-" + tail))
+    cnots = extractCNOTs(os.path.join('tmp', "tmpqiskit-" + tail))
     sorted_cnots = sortCnots(logNum, cnots)
     numCnots = len(cnots)
 
@@ -825,7 +825,7 @@ if __name__ == "__main__":
             arch = np.array(ast.literal_eval(f.read()))
     base, _ = os.path.splitext(os.path.basename(args.prog))
     #print(transpile(args.prog, arch, 1, "prob_"+base, "sol_"+base, slice_size=args.k, max_sat_time=args.timeout, routing= not args.no_route, weighted= args.weighted, calibrationData=error_rates[args.err] if args.err else None, bounded_above=False ))
-    (stats, qasm) = transpile(args.prog, arch, 1, "prob_"+base, "sol_"+base, slice_size=args.k, max_sat_time=args.timeout, routing= not args.no_route, weighted= args.weighted, calibrationData=error_rates[args.err] if args.err else None, bounded_above=True )
+    (stats, qasm) = transpile(args.prog, arch, 1, "prob_"+base, "sol_"+base, slice_size=args.k, max_sat_time=args.timeout, routing=True, weighted= args.weighted, calibrationData=error_rates[args.err] if args.err else None, bounded_above=True )
     print("num_swaps={}".format(stats["cost"]))
 
     out_file = os.path.join(args.output_path, "mapped_"+os.path.basename(args.prog))
