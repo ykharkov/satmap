@@ -427,9 +427,9 @@ def solve_bounded_above(progName, cm, swapNum, chunks, pname="test", sname="out"
     return_results = {}
     hack = qiskit.QuantumCircuit.from_qasm_file(progName)
     (head, tail) = os.path.split(progName)
-    with open(os.path.join(head, "tmpqiskit-" + tail), "w") as f:
+    with open(os.path.join('tmp', "tmpqiskit-" + tail), "w") as f:
         f.write(hack.qasm())
-    cnots = extractCNOTs(os.path.join(head, "tmpqiskit-" + tail))
+    cnots = extractCNOTs(os.path.join('tmp', "tmpqiskit-" + tail))
     numCnots = len(cnots)
 
     layers= range(len(cnots))
@@ -744,7 +744,7 @@ def toQasmFF(progName, cm, swapNum, chunks, solSource,  swaps=None):
         if type(solSource) is str:  # i.e we are reading from a file
             (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, "tmp/"+solSource + "-chnk" + str(i) + ".txt", progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None)
         else: # we are reading from solvers
-            (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, solSource[i], progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None)
+            (mapped_circ, gates, finalMap) = toQasm(physNum, logNum, currentSize, swapNum, "tmp/"+solSource[i], progName, cm, prevMap, append_rest=is_last, start=pointer, swapList= swaps[i] if swaps else None)
         pointer = gates
         prevMap = finalMap
         circ.compose(mapped_circ, inplace=True)
@@ -766,13 +766,13 @@ def transpile(progname, cm, swapNum=1, cnfname='test', sname='out', slice_size=2
     chunks = -(len(extractCNOTs(progname)) // -slice_size)
     if routing:
         stats = solve(progname, cm, swapNum, chunks, pname=cnfname, sname=sname, time_wbo_max=max_sat_time, _calibrationData=calibrationData)
-        return (stats, toQasmFF(os.path.join(os.path.split(progname)[0], "tmpqiskit-"+os.path.split(progname)[1]),  cm, swapNum, chunks, sname))
+        return (stats, toQasmFF(os.path.join('tmp', "tmpqiskit-"+os.path.split(progname)[1]),  cm, swapNum, chunks, sname))
     elif bounded_above:
      results = solve_bounded_above(progname, cm, swapNum, chunks, pname=cnfname, sname=sname)
-     return ((results['cost'], results['a_star_time']), toQasmFF(os.path.join(os.path.split(progname)[0], "tmpqiskit-"+os.path.split(progname)[1]),  cm, swapNum, chunks, results['solvers'], swaps=results['swaps']))
+     return ((results['cost'], results['a_star_time']), toQasmFF(os.path.join('tmp', "tmpqiskit-"+os.path.split(progname)[1]),  cm, swapNum, chunks, results['solvers'], swaps=results['swaps']))
     else:
       results = solve(progname, cm, swapNum, chunks, pname=cnfname, sname=sname, _routing=False, _weighted=weighted)
-      return ((results['cost'], results['time_wbo'], results['a_star_time']), toQasmFF(os.path.join(os.path.split(progname)[0], "tmpqiskit-"+os.path.split(progname)[1]),  cm, swapNum, chunks, sname, swaps=results['swaps']))
+      return ((results['cost'], results['time_wbo'], results['a_star_time']), toQasmFF(os.path.join(os.path.split(progname)[0], "tmp/tmpqiskit-"+os.path.split(progname)[1]),  cm, swapNum, chunks, sname, swaps=results['swaps']))
 
 
 
